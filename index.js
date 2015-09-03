@@ -9,6 +9,7 @@ var minimatch = require('minimatch');
 var when = require('when');
 var es = require('event-stream');
 var Readable = require('stream').Readable;
+var gulpConcat = require('gulp-concat');
 var _ = require('lodash');
 
 module.exports = function (options) {
@@ -21,28 +22,28 @@ module.exports = function (options) {
   var endCondReg = /<!\[endif\]-->/gim;
   var basePath, mainPath, mainName, alternatePath;
 
-
-  function getPath(name) {
+  function getPath (name) {
     var filePath = path.join(path.relative(basePath, mainPath), name);
     var isStatic = name.split('.').pop() === 'js' || name.split('.').pop() === 'css';
 
-    if (options.outputRelativePath && isStatic)
+    if (options.outputRelativePath && isStatic) {
       filePath = options.outputRelativePath + name;
+    }
     return filePath;
   }
 
-  function createFile(name, content) {
+  function createFile (name, content) {
     return new gutil.File({
       path: getPath(name),
       contents: new Buffer(content)
     })
   }
 
-  function getBlockType(content) {
+  function getBlockType (content) {
     return !cssReg.test(content) ? 'js' : 'css';
   }
 
-  function readStream(streamCtor, callback) {
+  function readStream (streamCtor, callback) {
     var files = [];
     var deferred = when.defer();
 
@@ -69,7 +70,7 @@ module.exports = function (options) {
     return deferred.promise;
   }
 
-  function produceMatcher(fileArray) {
+  function produceMatcher (fileArray) {
     var allFiles = fileArray.map(function (file) {
       return file.path;
     });
@@ -83,7 +84,7 @@ module.exports = function (options) {
 
     return {
       matching: function (patterns) {
-        function doMatch(pattern) {
+        function doMatch (pattern) {
           return minimatch.match(allFiles, pattern);
         }
 
@@ -110,7 +111,7 @@ module.exports = function (options) {
     }
   }
 
-  function getFiles(content, reg, alternatePath, matcherPromise) {
+  function getFiles (content, reg, alternatePath, matcherPromise) {
     var paths = [];
     var promises = [];
     var files = [];
@@ -148,8 +149,9 @@ module.exports = function (options) {
           }
 
           var filePath = path.resolve(path.join(alternatePath || options.path || mainPath, pattern));
-          if (options.assetsDir)
+          if (options.assetsDir) {
             filePath = path.resolve(path.join(options.assetsDir, path.relative(basePath, filePath)));
+          }
 
           (isExc ? exc : inc).push(filePath);
         });
@@ -157,7 +159,10 @@ module.exports = function (options) {
       });
 
     if (!matcherPromise) {
-      function globSync(pattern) { return glob.sync(pattern); }
+      function globSync (pattern) {
+        return glob.sync(pattern);
+      }
+
       // read files from filesystem
       for (i = 0, l = paths.length; i < l; ++i) {
         var incs = paths[i].inc.map(globSync);
@@ -195,28 +200,11 @@ module.exports = function (options) {
     }
   }
 
-  function concat(files, name) {
-    var buffer = [];
-
-    files.forEach(function (file) {
-      buffer.push(String(file.contents));
-    });
-
-    return createFile(name, buffer.join(EOL));
+  function concatThrough (name) {
+    return gulpConcat(name);
   }
 
-  function concatThrough(name) {
-    var throughFiles = [];
-    return through.obj(function (file, enc, done) {
-      throughFiles.push(file);
-      done();
-    }, function (done) {
-      this.push(concat(throughFiles, name));
-      done();
-    });
-  }
-
-  function wrapLazypipe(lazypipe) {
+  function wrapLazypipe (lazypipe) {
     return function (stream, concat) {
       if (!_.isUndefined(concat)) {
         return stream
@@ -230,8 +218,7 @@ module.exports = function (options) {
     };
   }
 
-  function processTask(pipeline, name, files) {
-    var newFiles = [];
+  function processTask (pipeline, name, files) {
     if (pipeline === null) {
       return null;
     }
@@ -265,7 +252,7 @@ module.exports = function (options) {
     }
   }
 
-  function process(name, files, pipelineId) {
+  function process (name, files, pipelineId) {
     var pipeline = options[pipelineId];
     if (typeof pipeline === 'undefined') {
       pipeline = [];
@@ -274,7 +261,7 @@ module.exports = function (options) {
     return processTask(pipeline, name, files);
   }
 
-  function processHtml(content, matcherProducer) {
+  function processHtml (content, matcherProducer) {
     var html = [];
     var sections = content.split(endReg);
     var promise = when.resolve();
@@ -319,13 +306,16 @@ module.exports = function (options) {
                   return '/' + path.relative(f.base, f.path).split(path.sep).join('/');
                 });
                 filePaths
-                  .map(function (path) { return [path, getPath(path)] })
+                  .map(function (path) {
+                    return [path, getPath(path)]
+                  })
                   .forEach(function (filePath) {
                     var relPath = filePath[0].replace(path.basename(filePath[0]), path.basename(filePath[1]));
-                    if (type === 'js')
+                    if (type === 'js') {
                       html.push('<script src="' + relPath + '"></script>');
-                    else
+                    } else {
                       html.push('<link rel="stylesheet" href="' + relPath + '"/>');
+                    }
                   });
               });
           }(section, alternatePath));
@@ -350,7 +340,9 @@ module.exports = function (options) {
 
     return promise.then(function () {
       streams.push(process(mainName, [createFile(mainName, html.join(''))], 'html'));
-      return es.merge.apply(es, streams.filter(function (stream) { return stream !== null; }));
+      return es.merge.apply(es, streams.filter(function (stream) {
+        return stream !== null;
+      }));
     });
   }
 
