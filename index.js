@@ -307,14 +307,13 @@ module.exports = function (options) {
                 });
                 filePaths
                   .map(function (path) {
-                    return [path, getPath(path)]
+                    return getPath(path);
                   })
                   .forEach(function (filePath) {
-                    var relPath = filePath[0].replace(path.basename(filePath[0]), path.basename(filePath[1]));
                     if (type === 'js') {
-                      html.push('<script src="' + relPath + '"></script>');
+                      html.push('<script src="' + filePath + '"></script>');
                     } else {
-                      html.push('<link rel="stylesheet" href="' + relPath + '"/>');
+                      html.push('<link rel="stylesheet" href="' + filePath + '"/>');
                     }
                   });
               });
