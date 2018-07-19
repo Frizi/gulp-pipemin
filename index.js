@@ -169,7 +169,7 @@ module.exports = function (options) {
         var excs = paths[i].exc.map(globSync);
         var filepaths = _.difference(_.union.apply(null, incs), _.union.apply(null, excs));
         if (filepaths[0] === undefined) {
-          throw new gutil.PluginError('gulp-usemin', 'Path ' + paths[i] + ' not found!');
+          throw new gutil.PluginError('gulp-usemin', 'Path ' + paths[i].src + ' not found!');
         }
         promises.push.apply(promises, filepaths.map(function (filepath) {
           var fileDeferred = when.defer();
